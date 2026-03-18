@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Outfit Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>My Outfit Planner</h1>
+
+    <div class="avatar-container">
+        <img src="images/base.png" class="layer" id="base">
+        <img src="images/top1.png" class="layer hidden" id="top">
+        <img src="images/skirt1.png" class="layer hidden" id="skirt">
+        <img src="images/shoes1.png" class="layer hidden" id="shoes">
+    </div>
+
+    <div class="controls">
+        <button onclick="toggleItem('top')">Toggle Top</button>
+        <button onclick="toggleItem('skirt')">Toggle Skirt</button>
+        <button onclick="toggleItem('shoes')">Toggle Shoes</button>
+    </div>
+
+<script src="script.js"></script>
+</body>
+</html>

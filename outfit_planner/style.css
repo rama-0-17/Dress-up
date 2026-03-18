@@ -1,0 +1,25 @@
+body {
+    text-align: center;
+    font-family: Arial;
+}
+
+.avatar-container {
+    position: relative;
+    width: 300px;
+    margin: auto;
+}
+
+.layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+.hidden {
+    display: none;
+}
+
+.controls {
+    margin-top: 350px;
+}
