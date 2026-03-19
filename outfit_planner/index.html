@@ -1119,7 +1119,7 @@ function resetOutfit() {
   showToast('✦ Outfit cleared');
 }
 
-function randomOutfit() {
+function randomOutfit(silent = false) {
   CATEGORIES.forEach(cat => {
     const items = wardrobe[cat];
     if (items.length) {
@@ -1128,7 +1128,7 @@ function randomOutfit() {
     }
   });
   renderGrid(currentTab);
-  showToast('🎲 Random look generated!');
+  if (!silent) showToast('🎲 Random look generated!');
 }
 
 // ── SAVE ───────────────────────────────────────────────────────────────────
@@ -1259,6 +1259,7 @@ tabsEl.addEventListener('wheel', e => {
 window.addEventListener('load', updateArrows);
 
 // ── INIT ───────────────────────────────────────────────────────────────────
+randomOutfit(true);
 renderGrid('tops');
 </script>
 </body>
