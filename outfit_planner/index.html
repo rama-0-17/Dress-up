@@ -142,7 +142,7 @@
   .mannequin-stage {
     position: relative;
     height: min(520px, calc(100vh - 220px));
-    aspect-ratio: 1389 / 2000;
+    aspect-ratio: 1500 / 2500;
     filter: drop-shadow(0 16px 32px rgba(100,60,50,0.13));
   }
 
@@ -654,11 +654,11 @@ const LAYER_MAP  = {
   Format: { top, left, width, height }  — all 0..1 fractions
 */
 const CROP = {
-  tops:    { top: 0.24, left: 0.28, width: 0.45, height: 0.30 },
-  bottoms: { top: 0.39, left: 0.28, width: 0.44, height: 0.48 },
-  shoes:   { top: 0.76, left: 0.36, width: 0.30, height: 0.18 },
-  blush:   { top: 0.12, left: 0.41, width: 0.20, height: 0.20 }, // head area
-  hair:    { top: 0.08, left: 0.21, width: 0.60, height: 0.40 }, // head + hair
+  tops:    { top: 0.23, left: 0.22, width: 0.58, height: 0.30 },
+  bottoms: { top: 0.39, left: 0.26, width: 0.48, height: 0.53 },
+  shoes:   { top: 0.765, left: 0.365, width: 0.29, height: 0.20 },
+  blush:   { top: 0.12, left: 0.39, width: 0.25, height: 0.15 }, // head area
+  hair:    { top: 0.10, left: 0.235, width: 0.55, height: 0.30 }, // head + hair
 };
 // Default crop for any unknown / future category
 const CROP_DEFAULT = { top: 0.10, left: 0.25, width: 0.50, height: 0.50 };
