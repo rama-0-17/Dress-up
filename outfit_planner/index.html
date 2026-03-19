@@ -125,11 +125,6 @@
     text-transform: uppercase;
   }
 
-  /*
-    All PNGs share the same 1389×2000 canvas.
-    Stacking them absolutely at the same size means
-    each clothing item sits at its correct body position automatically.
-  */
   .mannequin-stage {
     position: relative;
     height: min(520px, calc(100vh - 220px));
@@ -141,7 +136,7 @@
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    object-fit: fill; /* fill keeps exact pixel alignment */
+    object-fit: fill;
     transition: opacity 0.3s ease;
   }
 
@@ -150,7 +145,7 @@
   #bottomLayer      { z-index: 3; }
   #topLayer         { z-index: 4; }
   #blushLayer       { z-index: 5; }
-  #hairLayer        { z-index: 6; } /* on top of everything */
+  #hairLayer        { z-index: 6; }
 
   .outfit-summary {
     margin-top: 20px;
@@ -262,6 +257,18 @@
     font-size: 1.4rem;
   }
 
+  /*
+    Thumbnails: show a cropped canvas render instead of the full PNG.
+    The <canvas> element fills the tile.
+  */
+  .clothing-item canvas.thumb-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: auto;
+  }
+
+  /* Fallback img (for uploaded items before canvas renders) */
   .clothing-item .thumb-img {
     width: 100%;
     height: 100%;
@@ -506,16 +513,12 @@
     <div class="room-label">Dressing Room</div>
 
     <div class="mannequin-stage">
-      <!--
-        Every PNG is 1389×2000 with black bg removed → now transparent.
-        All layers use object-fit:fill so each sits at its exact canvas position.
-      -->
-      <img id="baseLayer"        src="images/base.png"    alt="base">
-      <img id="bottomLayer"      src=""                   alt="bottom"      style="display:none;">
-      <img id="topLayer"         src=""                   alt="top"         style="display:none;">
-      <img id="shoesLayer"       src=""                   alt="shoes"       style="display:none;">
-      <img id="blushLayer"       src=""                   alt="blush"       style="display:none;">
-      <img id="hairLayer"        src=""                   alt="hair"        style="display:none;">
+      <img id="baseLayer"        src="images/base.png" alt="base">
+      <img id="bottomLayer"      src="" alt="bottom"      style="display:none;">
+      <img id="topLayer"         src="" alt="top"         style="display:none;">
+      <img id="shoesLayer"       src="" alt="shoes"       style="display:none;">
+      <img id="blushLayer"       src="" alt="blush"       style="display:none;">
+      <img id="hairLayer"        src="" alt="hair"        style="display:none;">
     </div>
 
     <div class="outfit-summary" id="outfitSummary">
@@ -528,11 +531,11 @@
   <!-- WARDROBE PANEL -->
   <div class="wardrobe-panel">
     <div class="category-tabs">
-      <div class="tab active" onclick="switchTab(this,'tops')">     <span class="tab-icon">👕</span>Tops</div>
-      <div class="tab"        onclick="switchTab(this,'bottoms')">  <span class="tab-icon">🩱</span>Bottoms</div>
-      <div class="tab"        onclick="switchTab(this,'shoes')">    <span class="tab-icon">👟</span>Shoes</div>
-      <div class="tab"        onclick="switchTab(this,'blush')">    <span class="tab-icon">😊</span>Blush</div>
-      <div class="tab"        onclick="switchTab(this,'hair')">     <span class="tab-icon">👧🏻</span>Hair</div>
+      <div class="tab active" onclick="switchTab(this,'tops')">      <span class="tab-icon">👕</span>Tops</div>
+      <div class="tab"        onclick="switchTab(this,'bottoms')">   <span class="tab-icon">👖</span>Bottoms</div>
+      <div class="tab"        onclick="switchTab(this,'shoes')">     <span class="tab-icon">👟</span>Shoes</div>
+      <div class="tab"        onclick="switchTab(this,'blush')">     <span class="tab-icon">😊</span>Blush</div>
+      <div class="tab"        onclick="switchTab(this,'hair')">      <span class="tab-icon">👧🏻</span>Hair</div>
     </div>
 
     <div class="clothing-grid-wrapper">
@@ -561,7 +564,6 @@
     </label>
     <img id="previewImg" alt="preview">
 
-    <!-- Hidden canvas for black-bg removal -->
     <canvas id="processCanvas" style="display:none;"></canvas>
 
     <div class="modal-field">
@@ -597,35 +599,118 @@ const LAYER_MAP  = {
   hair:'hairLayer',
 };
 
+/*
+  CROP REGIONS per category — as fractions of the full 1389×2000 canvas.
+  Measured from the bounding box of actual content pixels.
+  Add a little padding (~5%) around each region so items don't feel clipped.
+
+  Format: { top, left, width, height }  — all 0..1 fractions
+*/
+const CROP = {
+  tops:    { top: 0.24, left: 0.28, width: 0.45, height: 0.30 },
+  bottoms: { top: 0.39, left: 0.28, width: 0.44, height: 0.48 },
+  shoes:   { top: 0.76, left: 0.36, width: 0.30, height: 0.18 },
+  blush:   { top: 0.12, left: 0.41, width: 0.20, height: 0.20 }, // head area
+  hair:    { top: 0.08, left: 0.21, width: 0.60, height: 0.40 }, // head + hair
+};
+// Default crop for any unknown / future category
+const CROP_DEFAULT = { top: 0.10, left: 0.25, width: 0.50, height: 0.50 };
+
+/*
+  generateThumb(src, cat, size, callback)
+  Loads the image, draws just the crop region onto a canvas, returns dataURL.
+  size = pixel size of the square canvas to draw into (e.g. 200).
+*/
+function generateThumb(src, cat, size, callback) {
+  const crop = CROP[cat] || CROP_DEFAULT;
+  const img  = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const W = img.naturalWidth;
+    const H = img.naturalHeight;
+
+    const sx = Math.round(crop.left  * W);
+    const sy = Math.round(crop.top   * H);
+    const sw = Math.round(crop.width * W);
+    const sh = Math.round(crop.height* H);
+
+    // Draw into a square canvas, letterboxing if needed
+    const canvas = document.createElement('canvas');
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Neutral background matching our cream theme
+    ctx.fillStyle = '#fff9f4';
+    ctx.fillRect(0, 0, size, size);
+
+    // Fit the cropped region into the square with letterboxing
+    const scaleX = size / sw;
+    const scaleY = size / sh;
+    const scale  = Math.min(scaleX, scaleY);
+    const dw = sw * scale;
+    const dh = sh * scale;
+    const dx = (size - dw) / 2;
+    const dy = (size - dh) / 2;
+
+    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    callback(canvas.toDataURL('image/png'));
+  };
+  img.onerror = () => callback(null); // fallback: no thumb
+  img.src = src;
+}
+
 let wardrobe = {
-  tops:        [{ id:'top1',   name:'Chevron Tank',       src:'images/tops/top1.png'           },
-                { id:'top2',   name:'Red Ribbon',         src:'images/tops/top2.png'           },
-                { id:'top3',   name:'Basic Black Top',    src:'images/tops/Black_top.png'      },
-                { id:'top4',   name:'Basic White Top',    src:'images/tops/White-top.png'      },
-                { id:'top5',   name:'Brown Full Sleeves', src:'images/tops/Brown_top.png'      },
-                { id:'top6',   name:'Blue Office Shirt',  src:'images/tops/Blue_office.png'    },
-                { id:'top7',   name:'Pink Top',           src:'images/tops/Pink_ribbon.png'    },
-                { id:'top8',   name:'White Ruffle Top',   src:'images/tops/White_ruffle.png'   }],
-
-  bottoms:     [{ id:'bottom1', name:'Blue Jeans',         src:'images/bottoms/blue_jeans.png' },
-                { id:'bottom2', name:'Light Blue Jeans',   src:'images/bottoms/light_blue.png' },
-                { id:'bottom3', name:'Black Flare Jeans',  src:'images/bottoms/black_flare.png'},
-                { id:'bottom4', name:'White Ruffle Skirt', src:'images/bottoms/skirt1.png'     }],
-
-  shoes:       [{ id:'shoes1', name:'White Sneakers',     src:'images/shoes/shoes1.png'        },
-                { id:'shoes2', name:'Black Boots',        src:'images/shoes/Black_boots.png'   },
-                { id:'shoes3', name:'Black Sandals',      src:'images/shoes/Black_sandals.png' }],
-
-  blush:       [{ id:'blush1', name:'Red Blush',          src:'images/blush/Red_blush.png'     },
-                { id:'blush2', name:'Pink Blush',         src:'images/blush/Pink_blush.png'    }],
-
-  hair:        [{ id:'hair1', name:'Hair to the Front',   src:'images/hair/Hair_front.png'     }],
+  tops:    [
+    { id:'top1', name:'Chevron Tank',       src:'images/tops/top1.png'        },
+    { id:'top2', name:'Red Ribbon',         src:'images/tops/top2.png'        },
+    { id:'top3', name:'Basic Black Top',    src:'images/tops/Black_top.png'   },
+    { id:'top4', name:'Basic White Top',    src:'images/tops/White-top.png'   },
+    { id:'top5', name:'Brown Full Sleeves', src:'images/tops/Brown_top.png'   },
+    { id:'top6', name:'Blue Office Shirt',  src:'images/tops/Blue_office.png' },
+    { id:'top7', name:'Pink Top',           src:'images/tops/Pink_ribbon.png' },
+    { id:'top8', name:'White Ruffle Top',   src:'images/tops/White_ruffle.png'},
+  ],
+  bottoms: [
+    { id:'bottom1', name:'Blue Jeans',        src:'images/bottoms/blue_jeans.png'  },
+    { id:'bottom2', name:'Light Blue Jeans',  src:'images/bottoms/light_blue.png'  },
+    { id:'bottom3', name:'Black Flare Jeans', src:'images/bottoms/black_flare.png' },
+    { id:'bottom4', name:'White Ruffle Skirt',src:'images/bottoms/skirt1.png'      },
+  ],
+  shoes:   [
+    { id:'shoes1', name:'White Sneakers', src:'images/shoes/shoes1.png'       },
+    { id:'shoes2', name:'Black Boots',    src:'images/shoes/Black_boots.png'  },
+    { id:'shoes3', name:'Black Sandals',  src:'images/shoes/Black_sandals.png'},
+  ],
+  blush:   [
+    { id:'blush1', name:'Red Blush',  src:'images/blush/Red_blush.png' },
+    { id:'blush2', name:'Pink Blush', src:'images/blush/Pink_blush.png'},
+  ],
+  hair:    [
+    { id:'hair1', name:'Hair to the Front', src:'images/hair/Hair_front.png' },
+  ],
 };
 
-let selected     = { tops:null, bottoms:null, shoes:null, blush:null, hair:null};
+let selected     = { tops:null, bottoms:null, shoes:null, blush:null, hair:null };
 let currentTab   = 'tops';
-let processedURL = null; // black-bg-removed dataURL for upload
+let processedURL = null;
 let savedOutfits = [];
+
+// ── THUMBNAIL RENDERING ────────────────────────────────────────────────────
+/*
+  We create a <canvas> thumbnail for each item so only the relevant
+  body region is visible — no more tiny icons lost in whitespace.
+  Thumbnails are cached on the item object itself (item.thumbURL).
+*/
+const THUMB_SIZE = 200; // px, rendered at 200×200 then CSS scales it down
+
+function ensureThumb(item, cat, onReady) {
+  if (item.thumbURL) { onReady(item.thumbURL); return; }
+  generateThumb(item.src, cat, THUMB_SIZE, url => {
+    if (url) item.thumbURL = url;
+    onReady(url || item.src); // fallback to full src if generation fails
+  });
+}
 
 // ── GRID ───────────────────────────────────────────────────────────────────
 function renderGrid(cat) {
@@ -642,12 +727,21 @@ function renderGrid(cat) {
   wardrobe[cat].forEach(item => {
     const el = document.createElement('div');
     el.className = 'clothing-item' + (selected[cat] === item.id ? ' selected' : '');
+    // Placeholder while thumb loads
     el.innerHTML = `
-      <img class="thumb-img" src="${item.src}" alt="${item.name}">
+      <img class="thumb-img" src="" alt="${item.name}" style="opacity:0;">
       <div class="selected-badge">✓</div>
       <div class="item-label">${item.name}</div>`;
     el.onclick = () => selectItem(cat, item.id, item.src);
     grid.appendChild(el);
+
+    // Async: generate / retrieve cropped thumbnail
+    const imgEl = el.querySelector('.thumb-img');
+    ensureThumb(item, cat, thumbURL => {
+      imgEl.src = thumbURL;
+      imgEl.style.opacity = '1';
+      imgEl.style.transition = 'opacity 0.2s';
+    });
   });
 
   const addBtn = document.createElement('button');
@@ -699,13 +793,10 @@ function updateSummary() {
 function randomOutfit() {
   CATEGORIES.forEach(cat => {
     const items = wardrobe[cat];
-    if (items.length) selectItem(cat, items[Math.floor(Math.random()*items.length)].id,
-                                      items[Math.floor(Math.random()*items.length)].src);
-  });
-  // redo with consistent pick
-  CATEGORIES.forEach(cat => {
-    const items = wardrobe[cat];
-    if (items.length) { const p = items[Math.floor(Math.random()*items.length)]; selectItem(cat,p.id,p.src); }
+    if (items.length) {
+      const p = items[Math.floor(Math.random() * items.length)];
+      selectItem(cat, p.id, p.src);
+    }
   });
   renderGrid(currentTab);
   showToast('🎲 Random look generated!');
@@ -722,10 +813,10 @@ function renderSaved() {
   const strip = document.getElementById('savedStrip');
   strip.innerHTML = '';
   if (!savedOutfits.length) { strip.innerHTML = '<div class="no-saved">No looks saved yet~</div>'; return; }
-  savedOutfits.forEach((outfit,i) => {
+  savedOutfits.forEach((outfit, i) => {
     const t = document.createElement('div');
     t.className = 'saved-outfit-thumb';
-    t.title = 'Look #'+(i+1);
+    t.title = 'Look #' + (i + 1);
     t.innerHTML = '👗';
     t.onclick = () => loadOutfit(outfit);
     strip.appendChild(t);
@@ -733,8 +824,12 @@ function renderSaved() {
 }
 function loadOutfit(outfit) {
   CATEGORIES.forEach(cat => {
-    if (outfit[cat]) { const item = wardrobe[cat].find(i=>i.id===outfit[cat]); if(item) selectItem(cat,item.id,item.src); }
-    else selectItem(cat,null,null);
+    if (outfit[cat]) {
+      const item = wardrobe[cat].find(i => i.id === outfit[cat]);
+      if (item) selectItem(cat, item.id, item.src);
+    } else {
+      selectItem(cat, null, null);
+    }
   });
   renderGrid(currentTab);
   showToast('Look loaded!');
@@ -764,16 +859,13 @@ function handleFileSelect(input) {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
-
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
-        // Make near-black pixels transparent
         if (d[i] < 40 && d[i+1] < 40 && d[i+2] < 40) d[i+3] = 0;
       }
       ctx.putImageData(imgData, 0, 0);
       processedURL = canvas.toDataURL('image/png');
-
       const prev = document.getElementById('previewImg');
       prev.src = processedURL;
       prev.style.display = 'block';
@@ -787,6 +879,7 @@ function confirmUpload() {
   const name = document.getElementById('itemName').value.trim() || 'New Item';
   const cat  = document.getElementById('itemCategory').value;
   if (!processedURL) { showToast('Please choose an image first'); return; }
+  // New uploaded items: thumbURL will be generated on first renderGrid
   wardrobe[cat].push({ id:'item_'+Date.now(), name, src: processedURL });
   closeModal();
   if (currentTab === cat) renderGrid(cat);
