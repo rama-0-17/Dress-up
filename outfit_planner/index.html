@@ -1,26 +1,822 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Outfit Planner</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✦ My Outfit Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #faf6f1;
+    --warm-white: #fff9f4;
+    --blush: #f2d9cc;
+    --dusty-rose: #d4a5a0;
+    --mauve: #9e6b72;
+    --charcoal: #2c2420;
+    --soft-brown: #7a5c50;
+    --accent: #c9857a;
+    --light-pink: #fce8e2;
+    --border: #e8d5cc;
+    --shadow: rgba(100, 60, 50, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--charcoal);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(242,217,204,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(201,133,122,0.2) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 28px 40px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(250,246,241,0.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--charcoal);
+  }
+  .logo span { color: var(--accent); font-style: italic; }
+
+  .header-actions { display: flex; gap: 12px; }
+
+  .btn-save {
+    background: var(--charcoal);
+    color: var(--cream);
+    border: none;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+  }
+  .btn-save:hover { background: var(--mauve); transform: translateY(-1px); }
+
+  .btn-random {
+    background: var(--light-pink);
+    color: var(--mauve);
+    border: 1.5px solid var(--dusty-rose);
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-random:hover { background: var(--blush); transform: translateY(-1px); }
+
+  .main-layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    height: calc(100vh - 81px);
+  }
+
+  /* ── DRESSING ROOM ── */
+  .dressing-room {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    position: relative;
+    background: var(--warm-white);
+    border-right: 1px solid var(--border);
+  }
+
+  .room-label {
+    position: absolute;
+    top: 20px;
+    left: 28px;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--dusty-rose);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /*
+    All PNGs share the same 1389×2000 canvas.
+    Stacking them absolutely at the same size means
+    each clothing item sits at its correct body position automatically.
+  */
+  .mannequin-stage {
+    position: relative;
+    height: min(520px, calc(100vh - 220px));
+    aspect-ratio: 1389 / 2000;
+    filter: drop-shadow(0 16px 32px rgba(100,60,50,0.13));
+  }
+
+  .mannequin-stage img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: fill; /* fill keeps exact pixel alignment */
+    transition: opacity 0.3s ease;
+  }
+
+  #baseLayer        { z-index: 1; }
+  #shoesLayer       { z-index: 2; }
+  #bottomLayer      { z-index: 3; }
+  #topLayer         { z-index: 4; }
+  #blushLayer       { z-index: 5; }
+  #hairLayer        { z-index: 6; } /* on top of everything */
+
+  .outfit-summary {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .outfit-tag {
+    background: var(--light-pink);
+    color: var(--mauve);
+    border: 1px solid var(--dusty-rose);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .outfit-tag .remove-tag {
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--accent);
+    transition: color 0.15s;
+  }
+  .outfit-tag .remove-tag:hover { color: var(--mauve); }
+
+  /* ── WARDROBE PANEL ── */
+  .wardrobe-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--cream);
+  }
+
+  .category-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .category-tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 16px 14px 14px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--soft-brown);
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .tab.active { color: var(--charcoal); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--charcoal); }
+  .tab-icon { font-size: 1rem; margin-right: 4px; }
+
+  .clothing-grid-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--blush) transparent;
+  }
+  .clothing-grid-wrapper::-webkit-scrollbar { width: 4px; }
+  .clothing-grid-wrapper::-webkit-scrollbar-thumb { background: var(--blush); border-radius: 4px; }
+
+  .clothing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .clothing-item {
+    aspect-ratio: 1;
+    background: var(--warm-white);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .clothing-item:hover {
+    border-color: var(--dusty-rose);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--shadow);
+  }
+  .clothing-item.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(201,133,122,0.25);
+  }
+  .clothing-item.none-item {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--border) 0px, var(--border) 1px,
+      transparent 1px, transparent 8px
+    );
+    color: var(--dusty-rose);
+    font-size: 1.4rem;
+  }
+
+  .clothing-item .thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    padding: 4px;
+  }
+
+  .clothing-item .selected-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    font-size: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .clothing-item.selected .selected-badge { opacity: 1; }
+
+  .item-label {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(44,36,32,0.6));
+    color: white;
+    font-size: 0.65rem;
+    padding: 12px 6px 5px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-weight: 500;
+  }
+  .clothing-item:hover .item-label { opacity: 1; }
+
+  .add-item-btn {
+    aspect-ratio: 1;
+    background: transparent;
+    border: 1.5px dashed var(--dusty-rose);
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--dusty-rose);
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .add-item-btn:hover { background: var(--light-pink); border-color: var(--accent); color: var(--accent); }
+  .add-icon { font-size: 1.5rem; line-height: 1; }
+
+  .saved-outfits-section {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    background: var(--warm-white);
+  }
+  .saved-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--dusty-rose);
+    font-weight: 500;
+    margin-bottom: 10px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+  }
+  .saved-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .saved-strip::-webkit-scrollbar { display: none; }
+
+  .saved-outfit-thumb {
+    flex-shrink: 0;
+    width: 56px; height: 70px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--warm-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+  }
+  .saved-outfit-thumb:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .no-saved { font-size: 0.75rem; color: var(--dusty-rose); font-style: italic; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(44,36,32,0.45);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--warm-white);
+    border-radius: 20px;
+    padding: 32px;
+    width: 340px;
+    box-shadow: 0 30px 60px rgba(100,60,50,0.2);
+    transform: translateY(12px);
+    transition: transform 0.25s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    margin-bottom: 6px;
+    color: var(--charcoal);
+  }
+  .modal-subtitle { font-size: 0.82rem; color: var(--soft-brown); margin-bottom: 22px; }
+
+  .upload-zone {
+    border: 2px dashed var(--dusty-rose);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--light-pink);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: var(--blush); }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-text { font-size: 0.82rem; color: var(--mauve); }
+
+  #previewImg {
+    display: none;
+    width: 100%;
+    height: 90px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: var(--cream);
+    margin-bottom: 12px;
+  }
+
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--soft-brown);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .modal-field input, .modal-field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--charcoal);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-field input:focus, .modal-field select:focus { border-color: var(--accent); }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel {
+    flex: 1; padding: 11px;
+    border: 1.5px solid var(--border);
+    border-radius: 30px;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--soft-brown);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover { background: var(--light-pink); }
+  .btn-confirm {
+    flex: 1; padding: 11px;
+    border: none;
+    border-radius: 30px;
+    background: var(--charcoal);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-confirm:hover { background: var(--mauve); }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--charcoal);
+    color: var(--cream);
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 </head>
 <body>
 
-    <h1>My Outfit Planner</h1>
+<header>
+  <div class="logo">✦ my <span>closet</span></div>
+  <div class="header-actions">
+    <button class="btn-random" onclick="randomOutfit()">🎲 Surprise me</button>
+    <button class="btn-save"   onclick="saveOutfit()">✦ Save Look</button>
+  </div>
+</header>
 
-    <div class="avatar-container">
-        <img src="images/base.png" class="layer" id="base">
-        <img src="images/top1.png" class="layer hidden" id="top">
-        <img src="images/skirt1.png" class="layer hidden" id="skirt">
-        <img src="images/shoes1.png" class="layer hidden" id="shoes">
+<div class="main-layout">
+
+  <!-- DRESSING ROOM -->
+  <div class="dressing-room">
+    <div class="room-label">Dressing Room</div>
+
+    <div class="mannequin-stage">
+      <!--
+        Every PNG is 1389×2000 with black bg removed → now transparent.
+        All layers use object-fit:fill so each sits at its exact canvas position.
+      -->
+      <img id="baseLayer"        src="images/base.png"    alt="base">
+      <img id="bottomLayer"      src=""                   alt="bottom"      style="display:none;">
+      <img id="topLayer"         src=""                   alt="top"         style="display:none;">
+      <img id="shoesLayer"       src=""                   alt="shoes"       style="display:none;">
+      <img id="blushLayer"       src=""                   alt="blush"       style="display:none;">
+      <img id="hairLayer"        src=""                   alt="hair"        style="display:none;">
     </div>
 
-    <div class="controls">
-        <button onclick="toggleItem('top')">Toggle Top</button>
-        <button onclick="toggleItem('skirt')">Toggle Skirt</button>
-        <button onclick="toggleItem('shoes')">Toggle Shoes</button>
+    <div class="outfit-summary" id="outfitSummary">
+      <div class="outfit-tag" style="opacity:0.5;">
+        <span>✦ select pieces from your wardrobe →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WARDROBE PANEL -->
+  <div class="wardrobe-panel">
+    <div class="category-tabs">
+      <div class="tab active" onclick="switchTab(this,'tops')">     <span class="tab-icon">👕</span>Tops</div>
+      <div class="tab"        onclick="switchTab(this,'bottoms')">  <span class="tab-icon">🩱</span>Bottoms</div>
+      <div class="tab"        onclick="switchTab(this,'shoes')">    <span class="tab-icon">👟</span>Shoes</div>
+      <div class="tab"        onclick="switchTab(this,'blush')">    <span class="tab-icon">😊</span>Blush</div>
+      <div class="tab"        onclick="switchTab(this,'hair')">     <span class="tab-icon">👧🏻</span>Hair</div>
     </div>
 
-<script src="script.js"></script>
+    <div class="clothing-grid-wrapper">
+      <div class="clothing-grid" id="clothingGrid"></div>
+    </div>
+
+    <div class="saved-outfits-section">
+      <div class="saved-label">Saved Looks</div>
+      <div class="saved-strip" id="savedStrip">
+        <div class="no-saved">No looks saved yet~</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-title">Add to Wardrobe</div>
+    <div class="modal-subtitle">Black backgrounds are removed automatically ✨</div>
+
+    <label class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(this)">
+      <div class="upload-icon">📸</div>
+      <div class="upload-text">Click to upload or drag & drop</div>
+    </label>
+    <img id="previewImg" alt="preview">
+
+    <!-- Hidden canvas for black-bg removal -->
+    <canvas id="processCanvas" style="display:none;"></canvas>
+
+    <div class="modal-field">
+      <label>Item Name</label>
+      <input type="text" id="itemName" placeholder="e.g. White Flowy Skirt">
+    </div>
+    <div class="modal-field">
+      <label>Category</label>
+      <select id="itemCategory">
+        <option value="tops">Tops</option>
+        <option value="bottoms">Bottoms</option>
+        <option value="shoes">Shoes</option>
+        <option value="blush">Blush</option>
+        <option value="hair">Hair</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel"  onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmUpload()">Add ✦</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ───────────────────────────────────────────────────────────────────
+const CATEGORIES = ['tops','bottoms','shoes','blush','hair'];
+const LAYER_MAP  = {
+  tops:'topLayer', bottoms:'bottomLayer',
+  shoes:'shoesLayer', blush:'blushLayer',
+  hair:'hairLayer',
+};
+
+let wardrobe = {
+  tops:        [{ id:'top1',   name:'Chevron Tank',       src:'images/tops/top1.png'           },
+                { id:'top2',   name:'Red Ribbon',         src:'images/tops/top2.png'           },
+                { id:'top3',   name:'Basic Black Top',    src:'images/tops/Black_top.png'      },
+                { id:'top4',   name:'Basic White Top',    src:'images/tops/White-top.png'      },
+                { id:'top5',   name:'Brown Full Sleeves', src:'images/tops/Brown_top.png'      },
+                { id:'top6',   name:'Blue Office Shirt',  src:'images/tops/Blue_office.png'    },
+                { id:'top7',   name:'Pink Top',           src:'images/tops/Pink_ribbon.png'    },
+                { id:'top8',   name:'White Ruffle Top',   src:'images/tops/White_ruffle.png'   }],
+
+  bottoms:     [{ id:'bottom1', name:'Blue Jeans',         src:'images/bottoms/blue_jeans.png' },
+                { id:'bottom2', name:'Light Blue Jeans',   src:'images/bottoms/light_blue.png' },
+                { id:'bottom3', name:'Black Flare Jeans',  src:'images/bottoms/black_flare.png'},
+                { id:'bottom4', name:'White Ruffle Skirt', src:'images/bottoms/skirt1.png'     }],
+
+  shoes:       [{ id:'shoes1', name:'White Sneakers',     src:'images/shoes/shoes1.png'        },
+                { id:'shoes2', name:'Black Boots',        src:'images/shoes/Black_boots.png'   },
+                { id:'shoes3', name:'Black Sandals',      src:'images/shoes/Black_sandals.png' }],
+
+  blush:       [{ id:'blush1', name:'Red Blush',          src:'images/blush/Red_blush.png'     },
+                { id:'blush2', name:'Pink Blush',         src:'images/blush/Pink_blush.png'    }],
+
+  hair:        [{ id:'hair1', name:'Hair to the Front',   src:'images/hair/Hair_front.png'     }],
+};
+
+let selected     = { tops:null, bottoms:null, shoes:null, blush:null, hair:null};
+let currentTab   = 'tops';
+let processedURL = null; // black-bg-removed dataURL for upload
+let savedOutfits = [];
+
+// ── GRID ───────────────────────────────────────────────────────────────────
+function renderGrid(cat) {
+  const grid = document.getElementById('clothingGrid');
+  grid.innerHTML = '';
+
+  // None tile
+  const noneEl = document.createElement('div');
+  noneEl.className = 'clothing-item none-item' + (selected[cat] === null ? ' selected' : '');
+  noneEl.innerHTML = `<span>✕</span><div class="selected-badge">✓</div>`;
+  noneEl.onclick = () => selectItem(cat, null, null);
+  grid.appendChild(noneEl);
+
+  wardrobe[cat].forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'clothing-item' + (selected[cat] === item.id ? ' selected' : '');
+    el.innerHTML = `
+      <img class="thumb-img" src="${item.src}" alt="${item.name}">
+      <div class="selected-badge">✓</div>
+      <div class="item-label">${item.name}</div>`;
+    el.onclick = () => selectItem(cat, item.id, item.src);
+    grid.appendChild(el);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-item-btn';
+  addBtn.innerHTML = `<span class="add-icon">+</span><span>Add</span>`;
+  addBtn.onclick = () => openModal(cat);
+  grid.appendChild(addBtn);
+}
+
+function switchTab(el, cat) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentTab = cat;
+  renderGrid(cat);
+}
+
+// ── SELECT ─────────────────────────────────────────────────────────────────
+function selectItem(cat, itemId, src) {
+  selected[cat] = itemId;
+  const layer = document.getElementById(LAYER_MAP[cat]);
+  if (itemId && src) {
+    layer.src = src;
+    layer.style.display = 'block';
+    layer.style.opacity = '0';
+    requestAnimationFrame(() => { layer.style.opacity = '1'; });
+  } else {
+    layer.style.display = 'none';
+  }
+  updateSummary();
+  renderGrid(cat);
+}
+
+function updateSummary() {
+  const s = document.getElementById('outfitSummary');
+  const tags = [];
+  CATEGORIES.forEach(cat => {
+    if (selected[cat]) {
+      const item = wardrobe[cat].find(i => i.id === selected[cat]);
+      if (item) tags.push(`<div class="outfit-tag">${item.name}
+        <span class="remove-tag" onclick="selectItem('${cat}',null,null)">×</span></div>`);
+    }
+  });
+  s.innerHTML = tags.length
+    ? tags.join('')
+    : `<div class="outfit-tag" style="opacity:0.5;"><span>✦ select pieces from your wardrobe →</span></div>`;
+}
+
+// ── RANDOM ─────────────────────────────────────────────────────────────────
+function randomOutfit() {
+  CATEGORIES.forEach(cat => {
+    const items = wardrobe[cat];
+    if (items.length) selectItem(cat, items[Math.floor(Math.random()*items.length)].id,
+                                      items[Math.floor(Math.random()*items.length)].src);
+  });
+  // redo with consistent pick
+  CATEGORIES.forEach(cat => {
+    const items = wardrobe[cat];
+    if (items.length) { const p = items[Math.floor(Math.random()*items.length)]; selectItem(cat,p.id,p.src); }
+  });
+  renderGrid(currentTab);
+  showToast('🎲 Random look generated!');
+}
+
+// ── SAVE ───────────────────────────────────────────────────────────────────
+function saveOutfit() {
+  if (!CATEGORIES.some(c => selected[c])) { showToast('Add some pieces first!'); return; }
+  savedOutfits.push({...selected});
+  renderSaved();
+  showToast('✦ Look saved!');
+}
+function renderSaved() {
+  const strip = document.getElementById('savedStrip');
+  strip.innerHTML = '';
+  if (!savedOutfits.length) { strip.innerHTML = '<div class="no-saved">No looks saved yet~</div>'; return; }
+  savedOutfits.forEach((outfit,i) => {
+    const t = document.createElement('div');
+    t.className = 'saved-outfit-thumb';
+    t.title = 'Look #'+(i+1);
+    t.innerHTML = '👗';
+    t.onclick = () => loadOutfit(outfit);
+    strip.appendChild(t);
+  });
+}
+function loadOutfit(outfit) {
+  CATEGORIES.forEach(cat => {
+    if (outfit[cat]) { const item = wardrobe[cat].find(i=>i.id===outfit[cat]); if(item) selectItem(cat,item.id,item.src); }
+    else selectItem(cat,null,null);
+  });
+  renderGrid(currentTab);
+  showToast('Look loaded!');
+}
+
+// ── UPLOAD + BLACK BG REMOVAL ──────────────────────────────────────────────
+function openModal(cat) {
+  document.getElementById('itemCategory').value = cat;
+  document.getElementById('itemName').value = '';
+  document.getElementById('previewImg').style.display = 'none';
+  processedURL = null;
+  document.getElementById('uploadModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('processCanvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        // Make near-black pixels transparent
+        if (d[i] < 40 && d[i+1] < 40 && d[i+2] < 40) d[i+3] = 0;
+      }
+      ctx.putImageData(imgData, 0, 0);
+      processedURL = canvas.toDataURL('image/png');
+
+      const prev = document.getElementById('previewImg');
+      prev.src = processedURL;
+      prev.style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function confirmUpload() {
+  const name = document.getElementById('itemName').value.trim() || 'New Item';
+  const cat  = document.getElementById('itemCategory').value;
+  if (!processedURL) { showToast('Please choose an image first'); return; }
+  wardrobe[cat].push({ id:'item_'+Date.now(), name, src: processedURL });
+  closeModal();
+  if (currentTab === cat) renderGrid(cat);
+  showToast(`✦ "${name}" added!`);
+}
+
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.background='var(--blush)'; });
+uploadZone.addEventListener('dragleave', () => { uploadZone.style.background=''; });
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.style.background='';
+  if (e.dataTransfer.files.length) {
+    document.getElementById('fileInput').files = e.dataTransfer.files;
+    handleFileSelect({ files: e.dataTransfer.files });
+  }
+});
+document.getElementById('uploadModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+renderGrid('tops');
+</script>
 </body>
 </html>
