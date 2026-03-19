@@ -62,7 +62,7 @@
   }
   .logo span { color: var(--accent); font-style: italic; }
 
-  .header-actions { display: flex; gap: 12px; }
+  .header-actions { display: flex; gap: 12px; align-items: center; }
 
   .btn-save {
     background: var(--charcoal);
@@ -106,6 +106,58 @@
     transition: all 0.2s;
   }
   .btn-reset:hover { background: var(--light-pink); border-color: var(--dusty-rose); color: var(--mauve); transform: translateY(-1px); }
+
+  /* ── DOWNLOAD BUTTON ── */
+  .btn-download {
+    background: linear-gradient(135deg, var(--dusty-rose), var(--accent));
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 14px rgba(201,133,122,0.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-download::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    pointer-events: none;
+  }
+  .btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(201,133,122,0.45);
+  }
+  .btn-download:active { transform: translateY(0); }
+  .btn-download.loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .btn-download .dl-icon {
+    font-size: 1rem;
+    transition: transform 0.2s;
+  }
+  .btn-download:hover .dl-icon {
+    transform: translateY(2px);
+  }
+  .btn-download.loading .dl-icon {
+    animation: bounce 0.6s infinite alternate;
+  }
+  @keyframes bounce {
+    from { transform: translateY(0); }
+    to   { transform: translateY(4px); }
+  }
 
   .main-layout {
     position: relative;
@@ -299,10 +351,6 @@
     font-size: 1.4rem;
   }
 
-  /*
-    Thumbnails: show a cropped canvas render instead of the full PNG.
-    The <canvas> element fills the tile.
-  */
   .clothing-item canvas.thumb-canvas {
     width: 100%;
     height: 100%;
@@ -310,7 +358,6 @@
     image-rendering: auto;
   }
 
-  /* Fallback img (for uploaded items before canvas renders) */
   .clothing-item .thumb-img {
     width: 100%;
     height: 100%;
@@ -536,6 +583,52 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── DOWNLOAD PREVIEW MODAL ── */
+  .download-modal {
+    background: var(--warm-white);
+    border-radius: 20px;
+    padding: 32px;
+    width: 380px;
+    box-shadow: 0 30px 60px rgba(100,60,50,0.2);
+    transform: translateY(12px);
+    transition: transform 0.25s;
+    text-align: center;
+  }
+  .modal-overlay.open .download-modal { transform: translateY(0); }
+
+  .download-preview-canvas {
+    width: 100%;
+    border-radius: 14px;
+    margin: 16px 0;
+    border: 1.5px solid var(--border);
+    background: var(--cream);
+    display: block;
+  }
+
+  .download-format-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    justify-content: center;
+  }
+  .format-btn {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--soft-brown);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .format-btn.active {
+    background: var(--charcoal);
+    color: white;
+    border-color: var(--charcoal);
+  }
+  .format-btn:hover:not(.active) { background: var(--light-pink); border-color: var(--dusty-rose); }
 </style>
 </head>
 <body>
@@ -543,9 +636,12 @@
 <header>
   <div class="logo">✦ my <span>closet</span></div>
   <div class="header-actions">
-    <button class="btn-reset"  onclick="resetOutfit()">↺ Reset</button>
-    <button class="btn-random" onclick="randomOutfit()">🎲 Surprise me</button>
-    <button class="btn-save"   onclick="saveOutfit()">✦ Save Look</button>
+    <button class="btn-reset"    onclick="resetOutfit()">↺ Reset</button>
+    <button class="btn-random"   onclick="randomOutfit()">🎲 Surprise me</button>
+    <button class="btn-save"     onclick="saveOutfit()">✦ Save Look</button>
+    <button class="btn-download" id="downloadBtn" onclick="openDownloadModal()">
+      <span class="dl-icon">⬇</span> Download Look
+    </button>
   </div>
 </header>
 
@@ -555,13 +651,13 @@
   <div class="dressing-room">
     <div class="room-label">Dressing Room</div>
 
-    <div class="mannequin-stage">
-      <img id="baseLayer"        src="images/base.png" alt="base">
-      <img id="bottomLayer"      src="" alt="bottom"      style="display:none;">
-      <img id="topLayer"         src="" alt="top"         style="display:none;">
-      <img id="shoesLayer"       src="" alt="shoes"       style="display:none;">
-      <img id="blushLayer"       src="" alt="blush"       style="display:none;">
-      <img id="hairLayer"        src="" alt="hair"        style="display:none;">
+    <div class="mannequin-stage" id="mannequinStage">
+      <img id="baseLayer"   src="images/base.png" alt="base">
+      <img id="bottomLayer" src="" alt="bottom" style="display:none;">
+      <img id="topLayer"    src="" alt="top"    style="display:none;">
+      <img id="shoesLayer"  src="" alt="shoes"  style="display:none;">
+      <img id="blushLayer"  src="" alt="blush"  style="display:none;">
+      <img id="hairLayer"   src="" alt="hair"   style="display:none;">
     </div>
 
     <div class="outfit-summary" id="outfitSummary">
@@ -583,7 +679,7 @@
         <div class="tab"        onclick="switchTab(this,'hair')">      <span class="tab-icon">👧🏻</span>Hair</div>
       </div>
       <button class="tab-arrow right" id="tabArrowRight" onclick="scrollTabs(1)">&#8594;</button>
-    </div><!-- /tabs-wrapper -->
+    </div>
 
     <div class="clothing-grid-wrapper">
       <div class="clothing-grid" id="clothingGrid"></div>
@@ -629,8 +725,28 @@
     </div>
 
     <div class="modal-actions">
-      <button class="btn-cancel"  onclick="closeModal()">Cancel</button>
+      <button class="btn-cancel"  onclick="closeModal('uploadModal')">Cancel</button>
       <button class="btn-confirm" onclick="confirmUpload()">Add ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- Download Preview Modal -->
+<div class="modal-overlay" id="downloadModal">
+  <div class="download-modal">
+    <div class="modal-title">Download your Look ✦</div>
+    <div class="modal-subtitle">Your outfit, ready to share or keep forever.</div>
+
+    <canvas id="downloadPreviewCanvas" class="download-preview-canvas"></canvas>
+
+    <div class="download-format-row">
+      <button class="format-btn active" id="fmtPng" onclick="setFormat('png')">PNG</button>
+      <button class="format-btn" id="fmtJpg" onclick="setFormat('jpg')">JPG</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel"  onclick="closeModal('downloadModal')">Cancel</button>
+      <button class="btn-confirm" onclick="triggerDownload()">⬇ Download</button>
     </div>
   </div>
 </div>
@@ -646,64 +762,39 @@ const LAYER_MAP  = {
   hair:'hairLayer',
 };
 
-/*
-  CROP REGIONS per category — as fractions of the full 1389×2000 canvas.
-  Measured from the bounding box of actual content pixels.
-  Add a little padding (~5%) around each region so items don't feel clipped.
+// Layer drawing order (bottom → top)
+const LAYER_ORDER = ['baseLayer','shoesLayer','bottomLayer','topLayer','blushLayer','hairLayer'];
 
-  Format: { top, left, width, height }  — all 0..1 fractions
-*/
 const CROP = {
   tops:    { top: 0.23, left: 0.22, width: 0.58, height: 0.30 },
   bottoms: { top: 0.39, left: 0.26, width: 0.48, height: 0.53 },
   shoes:   { top: 0.765, left: 0.365, width: 0.29, height: 0.20 },
-  blush:   { top: 0.12, left: 0.39, width: 0.25, height: 0.15 }, // head area
-  hair:    { top: 0.10, left: 0.235, width: 0.55, height: 0.30 }, // head + hair
+  blush:   { top: 0.12, left: 0.39, width: 0.25, height: 0.15 },
+  hair:    { top: 0.10, left: 0.235, width: 0.55, height: 0.30 },
 };
-// Default crop for any unknown / future category
 const CROP_DEFAULT = { top: 0.10, left: 0.25, width: 0.50, height: 0.50 };
 
-/*
-  generateThumb(src, cat, size, callback)
-  Loads the image, draws just the crop region onto a canvas, returns dataURL.
-  size = pixel size of the square canvas to draw into (e.g. 200).
-*/
 function generateThumb(src, cat, size, callback) {
   const crop = CROP[cat] || CROP_DEFAULT;
   const img  = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    const W = img.naturalWidth;
-    const H = img.naturalHeight;
-
-    const sx = Math.round(crop.left  * W);
-    const sy = Math.round(crop.top   * H);
-    const sw = Math.round(crop.width * W);
-    const sh = Math.round(crop.height* H);
-
-    // Draw into a square canvas, letterboxing if needed
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const sx = Math.round(crop.left   * W);
+    const sy = Math.round(crop.top    * H);
+    const sw = Math.round(crop.width  * W);
+    const sh = Math.round(crop.height * H);
     const canvas = document.createElement('canvas');
-    canvas.width  = size;
-    canvas.height = size;
+    canvas.width = canvas.height = size;
     const ctx = canvas.getContext('2d');
-
-    // Neutral background matching our cream theme
     ctx.fillStyle = '#fff9f4';
     ctx.fillRect(0, 0, size, size);
-
-    // Fit the cropped region into the square with letterboxing
-    const scaleX = size / sw;
-    const scaleY = size / sh;
-    const scale  = Math.min(scaleX, scaleY);
-    const dw = sw * scale;
-    const dh = sh * scale;
-    const dx = (size - dw) / 2;
-    const dy = (size - dh) / 2;
-
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    const scale = Math.min(size/sw, size/sh);
+    const dw = sw*scale, dh = sh*scale;
+    ctx.drawImage(img, sx, sy, sw, sh, (size-dw)/2, (size-dh)/2, dw, dh);
     callback(canvas.toDataURL('image/png'));
   };
-  img.onerror = () => callback(null); // fallback: no thumb
+  img.onerror = () => callback(null);
   img.src = src;
 }
 
@@ -742,20 +833,208 @@ let selected     = { tops:null, bottoms:null, shoes:null, blush:null, hair:null 
 let currentTab   = 'tops';
 let processedURL = null;
 let savedOutfits = [];
+let downloadFormat = 'png';
 
 // ── THUMBNAIL RENDERING ────────────────────────────────────────────────────
-/*
-  We create a <canvas> thumbnail for each item so only the relevant
-  body region is visible — no more tiny icons lost in whitespace.
-  Thumbnails are cached on the item object itself (item.thumbURL).
-*/
-const THUMB_SIZE = 200; // px, rendered at 200×200 then CSS scales it down
+const THUMB_SIZE = 200;
 
 function ensureThumb(item, cat, onReady) {
   if (item.thumbURL) { onReady(item.thumbURL); return; }
   generateThumb(item.src, cat, THUMB_SIZE, url => {
     if (url) item.thumbURL = url;
-    onReady(url || item.src); // fallback to full src if generation fails
+    onReady(url || item.src);
+  });
+}
+
+// ── DOWNLOAD LOOK ──────────────────────────────────────────────────────────
+/*
+  Composites all visible layers onto a canvas, draws a decorative card
+  around it (cream bg + subtle border + watermark), then exports as PNG or JPG.
+*/
+
+function openDownloadModal() {
+  const hasItems = CATEGORIES.some(c => selected[c]);
+  if (!hasItems) {
+    showToast('✦ Select some pieces first!');
+    return;
+  }
+
+  const btn = document.getElementById('downloadBtn');
+  btn.classList.add('loading');
+  btn.querySelector('.dl-icon').textContent = '…';
+
+  // Collect visible layers in order
+  const layers = LAYER_ORDER.map(id => document.getElementById(id))
+    .filter(el => el && el.style.display !== 'none' && el.src);
+
+  // Load all layer images (they may already be cached)
+  const loadImage = src => new Promise((res, rej) => {
+    if (!src) return rej();
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload  = () => res(img);
+    img.onerror = () => rej();
+    img.src = src;
+  });
+
+  Promise.all(layers.map(el => loadImage(el.src).catch(() => null)))
+    .then(imgs => {
+      // ── Build the export canvas ──────────────────────────────────────
+      // We export at 3× the display size for crisp results
+      const SCALE = 3;
+
+      // Use the actual aspect ratio of the mannequin stage (1500:2500 = 3:5)
+      const REF_W = 600, REF_H = 1000; // base reference size
+      const PAD   = 40;                 // padding around mannequin
+      const FOOTER = 60;                // space for watermark/label
+
+      const cW = (REF_W + PAD * 2) * SCALE;
+      const cH = (REF_H + PAD * 2 + FOOTER) * SCALE;
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width  = cW;
+      exportCanvas.height = cH;
+      const ctx = exportCanvas.getContext('2d');
+
+      // Background — soft cream gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, cH);
+      grad.addColorStop(0,   '#fff9f4');
+      grad.addColorStop(1,   '#faf0e8');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cW, cH);
+
+      // Subtle decorative border
+      ctx.strokeStyle = '#e8d5cc';
+      ctx.lineWidth   = 3 * SCALE;
+      const inset = 12 * SCALE;
+      roundRect(ctx, inset, inset, cW - inset*2, cH - inset*2, 14 * SCALE);
+      ctx.stroke();
+
+      // Corner decorations
+      drawCornerAccents(ctx, cW, cH, SCALE);
+
+      // Draw each mannequin layer
+      const dstX = PAD * SCALE;
+      const dstY = PAD * SCALE;
+      const dstW = REF_W * SCALE;
+      const dstH = REF_H * SCALE;
+
+      imgs.forEach(img => {
+        if (img) ctx.drawImage(img, dstX, dstY, dstW, dstH);
+      });
+
+      // Watermark / branding strip
+      const footerY = (PAD + REF_H + 12) * SCALE;
+      ctx.fillStyle  = '#c9857a';
+      ctx.font       = `italic ${13 * SCALE}px "Playfair Display", Georgia, serif`;
+      ctx.textAlign  = 'center';
+      ctx.fillText('✦ my closet', cW / 2, footerY + 18 * SCALE);
+
+      // Selected item names
+      const tagNames = CATEGORIES
+        .filter(c => selected[c])
+        .map(c => wardrobe[c].find(i => i.id === selected[c])?.name)
+        .filter(Boolean);
+      if (tagNames.length) {
+        ctx.fillStyle = '#9e6b72';
+        ctx.font      = `${9 * SCALE}px "DM Sans", sans-serif`;
+        ctx.fillText(tagNames.join('  ·  '), cW / 2, footerY + 36 * SCALE);
+      }
+
+      // ── Show preview in modal ──────────────────────────────────────
+      const previewCanvas = document.getElementById('downloadPreviewCanvas');
+      // Scale preview to fit nicely
+      const maxPreviewW = 320;
+      const previewScale = maxPreviewW / exportCanvas.width;
+      previewCanvas.width  = exportCanvas.width  * previewScale;
+      previewCanvas.height = exportCanvas.height * previewScale;
+      const pCtx = previewCanvas.getContext('2d');
+      pCtx.drawImage(exportCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+
+      // Store the full-res canvas for download
+      previewCanvas._exportCanvas = exportCanvas;
+
+      btn.classList.remove('loading');
+      btn.querySelector('.dl-icon').textContent = '⬇';
+
+      document.getElementById('downloadModal').classList.add('open');
+    })
+    .catch(() => {
+      btn.classList.remove('loading');
+      btn.querySelector('.dl-icon').textContent = '⬇';
+      showToast('Could not load images — make sure images are hosted locally.');
+    });
+}
+
+function setFormat(fmt) {
+  downloadFormat = fmt;
+  document.getElementById('fmtPng').classList.toggle('active', fmt === 'png');
+  document.getElementById('fmtJpg').classList.toggle('active', fmt === 'jpg');
+}
+
+function triggerDownload() {
+  const previewCanvas = document.getElementById('downloadPreviewCanvas');
+  const exportCanvas  = previewCanvas._exportCanvas;
+  if (!exportCanvas) return;
+
+  const isJpg    = downloadFormat === 'jpg';
+  const mimeType = isJpg ? 'image/jpeg' : 'image/png';
+  const ext      = isJpg ? 'jpg' : 'png';
+
+  // For JPG, flatten onto white first (no transparency)
+  let canvasToExport = exportCanvas;
+  if (isJpg) {
+    const flat = document.createElement('canvas');
+    flat.width = exportCanvas.width;
+    flat.height = exportCanvas.height;
+    const fCtx = flat.getContext('2d');
+    fCtx.fillStyle = '#fff9f4';
+    fCtx.fillRect(0, 0, flat.width, flat.height);
+    fCtx.drawImage(exportCanvas, 0, 0);
+    canvasToExport = flat;
+  }
+
+  const dataURL = canvasToExport.toDataURL(mimeType, 0.92);
+  const a = document.createElement('a');
+  a.href     = dataURL;
+  a.download = `my-look-${Date.now()}.${ext}`;
+  a.click();
+
+  closeModal('downloadModal');
+  showToast(`✦ Look downloaded as ${ext.toUpperCase()}!`);
+}
+
+// ── Canvas helpers ──────────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawCornerAccents(ctx, cW, cH, SCALE) {
+  ctx.strokeStyle = '#d4a5a0';
+  ctx.lineWidth   = 1.5 * SCALE;
+  const s = 22 * SCALE; // corner arm length
+  const m = 18 * SCALE; // corner margin
+
+  const corners = [
+    [m, m, 1, 1], [cW-m, m, -1, 1],
+    [m, cH-m, 1, -1], [cW-m, cH-m, -1, -1],
+  ];
+  corners.forEach(([x, y, dx, dy]) => {
+    ctx.beginPath();
+    ctx.moveTo(x + dx*s, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + dy*s);
+    ctx.stroke();
   });
 }
 
@@ -764,7 +1043,6 @@ function renderGrid(cat) {
   const grid = document.getElementById('clothingGrid');
   grid.innerHTML = '';
 
-  // None tile
   const noneEl = document.createElement('div');
   noneEl.className = 'clothing-item none-item' + (selected[cat] === null ? ' selected' : '');
   noneEl.innerHTML = `<span>✕</span><div class="selected-badge">✓</div>`;
@@ -774,7 +1052,6 @@ function renderGrid(cat) {
   wardrobe[cat].forEach(item => {
     const el = document.createElement('div');
     el.className = 'clothing-item' + (selected[cat] === item.id ? ' selected' : '');
-    // Placeholder while thumb loads
     el.innerHTML = `
       <img class="thumb-img" src="" alt="${item.name}" style="opacity:0;">
       <div class="selected-badge">✓</div>
@@ -782,7 +1059,6 @@ function renderGrid(cat) {
     el.onclick = () => selectItem(cat, item.id, item.src);
     grid.appendChild(el);
 
-    // Async: generate / retrieve cropped thumbnail
     const imgEl = el.querySelector('.thumb-img');
     ensureThumb(item, cat, thumbURL => {
       imgEl.src = thumbURL;
@@ -794,7 +1070,7 @@ function renderGrid(cat) {
   const addBtn = document.createElement('button');
   addBtn.className = 'add-item-btn';
   addBtn.innerHTML = `<span class="add-icon">+</span><span>Add</span>`;
-  addBtn.onclick = () => openModal(cat);
+  addBtn.onclick = () => openUploadModal(cat);
   grid.appendChild(addBtn);
 }
 
@@ -836,14 +1112,13 @@ function updateSummary() {
     : `<div class="outfit-tag" style="opacity:0.5;"><span>✦ select pieces from your wardrobe →</span></div>`;
 }
 
-// ── RESET ──────────────────────────────────────────────────────────────────
+// ── RESET / RANDOM ──────────────────────────────────────────────────────────
 function resetOutfit() {
   CATEGORIES.forEach(cat => selectItem(cat, null, null));
   renderGrid(currentTab);
   showToast('✦ Outfit cleared');
 }
 
-// ── RANDOM ─────────────────────────────────────────────────────────────────
 function randomOutfit() {
   CATEGORIES.forEach(cat => {
     const items = wardrobe[cat];
@@ -889,16 +1164,17 @@ function loadOutfit(outfit) {
   showToast('Look loaded!');
 }
 
-// ── UPLOAD + BLACK BG REMOVAL ──────────────────────────────────────────────
-function openModal(cat) {
+// ── UPLOAD ─────────────────────────────────────────────────────────────────
+function openUploadModal(cat) {
   document.getElementById('itemCategory').value = cat;
   document.getElementById('itemName').value = '';
   document.getElementById('previewImg').style.display = 'none';
   processedURL = null;
   document.getElementById('uploadModal').classList.add('open');
 }
-function closeModal() {
-  document.getElementById('uploadModal').classList.remove('open');
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
 }
 
 function handleFileSelect(input) {
@@ -933,9 +1209,8 @@ function confirmUpload() {
   const name = document.getElementById('itemName').value.trim() || 'New Item';
   const cat  = document.getElementById('itemCategory').value;
   if (!processedURL) { showToast('Please choose an image first'); return; }
-  // New uploaded items: thumbURL will be generated on first renderGrid
   wardrobe[cat].push({ id:'item_'+Date.now(), name, src: processedURL });
-  closeModal();
+  closeModal('uploadModal');
   if (currentTab === cat) renderGrid(cat);
   showToast(`✦ "${name}" added!`);
 }
@@ -950,8 +1225,11 @@ uploadZone.addEventListener('drop', e => {
     handleFileSelect({ files: e.dataTransfer.files });
   }
 });
-document.getElementById('uploadModal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this.id);
+  });
 });
 
 // ── TOAST ──────────────────────────────────────────────────────────────────
@@ -968,23 +1246,16 @@ const arrowLeft = document.getElementById('tabArrowLeft');
 const arrowRight= document.getElementById('tabArrowRight');
 
 function updateArrows() {
-  const atStart = tabsEl.scrollLeft <= 4;
-  const atEnd   = tabsEl.scrollLeft >= tabsEl.scrollWidth - tabsEl.clientWidth - 4;
-  arrowLeft.disabled  = atStart;
-  arrowRight.disabled = atEnd;
+  arrowLeft.disabled  = tabsEl.scrollLeft <= 4;
+  arrowRight.disabled = tabsEl.scrollLeft >= tabsEl.scrollWidth - tabsEl.clientWidth - 4;
 }
-
-function scrollTabs(dir) {
-  tabsEl.scrollLeft += dir * 180;
-}
-
+function scrollTabs(dir) { tabsEl.scrollLeft += dir * 180; }
 tabsEl.addEventListener('scroll', updateArrows);
 tabsEl.addEventListener('wheel', e => {
   if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
   e.preventDefault();
   tabsEl.scrollLeft += e.deltaY;
 }, { passive: false });
-
 window.addEventListener('load', updateArrows);
 
 // ── INIT ───────────────────────────────────────────────────────────────────
