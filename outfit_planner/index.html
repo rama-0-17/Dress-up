@@ -93,6 +93,20 @@
   }
   .btn-random:hover { background: var(--blush); transform: translateY(-1px); }
 
+  .btn-reset {
+    background: transparent;
+    color: var(--soft-brown);
+    border: 1.5px solid var(--border);
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-reset:hover { background: var(--light-pink); border-color: var(--dusty-rose); color: var(--mauve); transform: translateY(-1px); }
+
   .main-layout {
     position: relative;
     z-index: 1;
@@ -184,12 +198,40 @@
     background: var(--cream);
   }
 
-  .category-tabs {
+  .tabs-wrapper {
+    position: relative;
     display: flex;
+    align-items: stretch;
     border-bottom: 1px solid var(--border);
-    padding: 0 16px;
+  }
+
+  .tab-arrow {
+    flex-shrink: 0;
+    width: 32px;
+    background: var(--cream);
+    border: none;
+    cursor: pointer;
+    color: var(--dusty-rose);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    z-index: 2;
+  }
+  .tab-arrow:hover { color: var(--mauve); background: var(--light-pink); }
+  .tab-arrow:disabled { opacity: 0.25; cursor: default; }
+  .tab-arrow:disabled:hover { background: var(--cream); color: var(--dusty-rose); }
+  .tab-arrow.left { border-right: 1px solid var(--border); }
+  .tab-arrow.right { border-left: 1px solid var(--border); }
+
+  .category-tabs {
+    flex: 1;
+    display: flex;
+    padding: 0 8px;
     overflow-x: auto;
     scrollbar-width: none;
+    scroll-behavior: smooth;
   }
   .category-tabs::-webkit-scrollbar { display: none; }
 
@@ -501,6 +543,7 @@
 <header>
   <div class="logo">✦ my <span>closet</span></div>
   <div class="header-actions">
+    <button class="btn-reset"  onclick="resetOutfit()">↺ Reset</button>
     <button class="btn-random" onclick="randomOutfit()">🎲 Surprise me</button>
     <button class="btn-save"   onclick="saveOutfit()">✦ Save Look</button>
   </div>
@@ -530,13 +573,17 @@
 
   <!-- WARDROBE PANEL -->
   <div class="wardrobe-panel">
-    <div class="category-tabs">
-      <div class="tab active" onclick="switchTab(this,'tops')">      <span class="tab-icon">👕</span>Tops</div>
-      <div class="tab"        onclick="switchTab(this,'bottoms')">   <span class="tab-icon">👖</span>Bottoms</div>
-      <div class="tab"        onclick="switchTab(this,'shoes')">     <span class="tab-icon">👟</span>Shoes</div>
-      <div class="tab"        onclick="switchTab(this,'blush')">     <span class="tab-icon">😊</span>Blush</div>
-      <div class="tab"        onclick="switchTab(this,'hair')">      <span class="tab-icon">👧🏻</span>Hair</div>
-    </div>
+    <div class="tabs-wrapper" id="tabsWrapper">
+      <button class="tab-arrow left" id="tabArrowLeft" onclick="scrollTabs(-1)" disabled>&#8592;</button>
+      <div class="category-tabs" id="categoryTabs">
+        <div class="tab active" onclick="switchTab(this,'tops')">      <span class="tab-icon">👕</span>Tops</div>
+        <div class="tab"        onclick="switchTab(this,'bottoms')">   <span class="tab-icon">👖</span>Bottoms</div>
+        <div class="tab"        onclick="switchTab(this,'shoes')">     <span class="tab-icon">👟</span>Shoes</div>
+        <div class="tab"        onclick="switchTab(this,'blush')">     <span class="tab-icon">😊</span>Blush</div>
+        <div class="tab"        onclick="switchTab(this,'hair')">      <span class="tab-icon">👧🏻</span>Hair</div>
+      </div>
+      <button class="tab-arrow right" id="tabArrowRight" onclick="scrollTabs(1)">&#8594;</button>
+    </div><!-- /tabs-wrapper -->
 
     <div class="clothing-grid-wrapper">
       <div class="clothing-grid" id="clothingGrid"></div>
@@ -789,6 +836,13 @@ function updateSummary() {
     : `<div class="outfit-tag" style="opacity:0.5;"><span>✦ select pieces from your wardrobe →</span></div>`;
 }
 
+// ── RESET ──────────────────────────────────────────────────────────────────
+function resetOutfit() {
+  CATEGORIES.forEach(cat => selectItem(cat, null, null));
+  renderGrid(currentTab);
+  showToast('✦ Outfit cleared');
+}
+
 // ── RANDOM ─────────────────────────────────────────────────────────────────
 function randomOutfit() {
   CATEGORIES.forEach(cat => {
@@ -907,6 +961,31 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2400);
 }
+
+// ── TAB SCROLL ARROWS ─────────────────────────────────────────────────────
+const tabsEl    = document.getElementById('categoryTabs');
+const arrowLeft = document.getElementById('tabArrowLeft');
+const arrowRight= document.getElementById('tabArrowRight');
+
+function updateArrows() {
+  const atStart = tabsEl.scrollLeft <= 4;
+  const atEnd   = tabsEl.scrollLeft >= tabsEl.scrollWidth - tabsEl.clientWidth - 4;
+  arrowLeft.disabled  = atStart;
+  arrowRight.disabled = atEnd;
+}
+
+function scrollTabs(dir) {
+  tabsEl.scrollLeft += dir * 180;
+}
+
+tabsEl.addEventListener('scroll', updateArrows);
+tabsEl.addEventListener('wheel', e => {
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault();
+  tabsEl.scrollLeft += e.deltaY;
+}, { passive: false });
+
+window.addEventListener('load', updateArrows);
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 renderGrid('tops');
