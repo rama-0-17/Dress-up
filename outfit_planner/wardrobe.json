@@ -1,0 +1,167 @@
+{
+  "tops": [
+    {
+      "id": "tops-1",
+      "name": "Black Checks Shirt",
+      "src": "images/tops/Black_checks_shirt.png"
+    },
+    {
+      "id": "tops-2",
+      "name": "Black Checks Top",
+      "src": "images/tops/Black_checks_top.png"
+    },
+    {
+      "id": "tops-3",
+      "name": "Black Top",
+      "src": "images/tops/Black_top.png"
+    },
+    {
+      "id": "tops-4",
+      "name": "Blue Bow",
+      "src": "images/tops/Blue_bow.png"
+    },
+    {
+      "id": "tops-5",
+      "name": "Blue Chevron Tank",
+      "src": "images/tops/Blue_Chevron_Tank.png"
+    },
+    {
+      "id": "tops-6",
+      "name": "Blue Office",
+      "src": "images/tops/Blue_office.png"
+    },
+    {
+      "id": "tops-7",
+      "name": "Brown Oversized",
+      "src": "images/tops/Brown_oversized.png"
+    },
+    {
+      "id": "tops-8",
+      "name": "Brown Top",
+      "src": "images/tops/Brown_top.png"
+    },
+    {
+      "id": "tops-9",
+      "name": "Green Crop Groovy",
+      "src": "images/tops/Green_crop_groovy.png"
+    },
+    {
+      "id": "tops-10",
+      "name": "Green Denim",
+      "src": "images/tops/Green_denim.png"
+    },
+    {
+      "id": "tops-11",
+      "name": "Green Mesh",
+      "src": "images/tops/Green_mesh.png"
+    },
+    {
+      "id": "tops-12",
+      "name": "Matcha Shirt",
+      "src": "images/tops/Matcha_shirt.png"
+    },
+    {
+      "id": "tops-13",
+      "name": "Pink Ribbon",
+      "src": "images/tops/Pink_ribbon.png"
+    },
+    {
+      "id": "tops-14",
+      "name": "Red Gingham Top",
+      "src": "images/tops/Red_Gingham_Top.png"
+    },
+    {
+      "id": "tops-15",
+      "name": "Sky Blue Shirt",
+      "src": "images/tops/Sky_blue_shirt.png"
+    },
+    {
+      "id": "tops-16",
+      "name": "White Ruffle",
+      "src": "images/tops/White_ruffle.png"
+    },
+    {
+      "id": "tops-17",
+      "name": "White Stripes",
+      "src": "images/tops/White_stripes.png"
+    },
+    {
+      "id": "tops-18",
+      "name": "White Top",
+      "src": "images/tops/White-top.png"
+    }
+  ],
+  "bottoms": [
+    {
+      "id": "bottoms-1",
+      "name": "Black Flare",
+      "src": "images/bottoms/black_flare.png"
+    },
+    {
+      "id": "bottoms-2",
+      "name": "Black Star Jeans",
+      "src": "images/bottoms/black_star_jeans.png"
+    },
+    {
+      "id": "bottoms-3",
+      "name": "Blue Jeans",
+      "src": "images/bottoms/blue_jeans.png"
+    },
+    {
+      "id": "bottoms-4",
+      "name": "Green Flare",
+      "src": "images/bottoms/green_flare.png"
+    },
+    {
+      "id": "bottoms-5",
+      "name": "Light Blue",
+      "src": "images/bottoms/light_blue.png"
+    },
+    {
+      "id": "bottoms-6",
+      "name": "Skirt1",
+      "src": "images/bottoms/skirt1.png"
+    }
+  ],
+  "shoes": [
+    {
+      "id": "shoes-1",
+      "name": "Ballet Shoes",
+      "src": "images/shoes/Ballet_shoes.png"
+    },
+    {
+      "id": "shoes-2",
+      "name": "Black Boots",
+      "src": "images/shoes/Black_boots.png"
+    },
+    {
+      "id": "shoes-3",
+      "name": "Black Sandals",
+      "src": "images/shoes/Black_sandals.png"
+    },
+    {
+      "id": "shoes-4",
+      "name": "White Sneakers",
+      "src": "images/shoes/White_sneakers.png"
+    }
+  ],
+  "blush": [
+    {
+      "id": "blush-1",
+      "name": "Pink Blush",
+      "src": "images/blush/Pink_blush.png"
+    },
+    {
+      "id": "blush-2",
+      "name": "Red Blush",
+      "src": "images/blush/Red_blush.png"
+    }
+  ],
+  "hair": [
+    {
+      "id": "hair-1",
+      "name": "Hair Front",
+      "src": "images/hair/Hair_front.png"
+    }
+  ]
+}

@@ -800,37 +800,28 @@ function generateThumb(src, cat, size, callback) {
 }
 
 let wardrobe = {
-  tops:    [
-    { id:'top1', name:'Chevron Tank Top',       src:'images/tops/top1.png'        },
-    { id:'top2', name:'Red Gingham Top',         src:'images/tops/top2.png'        },
-    { id:'top3', name:'Basic Black Top',    src:'images/tops/Black_top.png'   },
-    { id:'top4', name:'Basic White Top',    src:'images/tops/White-top.png'   },
-    { id:'top5', name:'Brown Ribbed Polo', src:'images/tops/Brown_top.png'   },
-    { id:'top6', name:'Blue Fitted Shirt',  src:'images/tops/Blue_office.png' },
-    { id:'top7', name:'Pink Ribbed Top',           src:'images/tops/Pink_ribbon.png' },
-    { id:'top8', name:'White Ruffle Top',   src:'images/tops/White_ruffle.png'},
-    { id:'top9', name:'Green Mesh Top',     src:'images/tops/Green_mesh.png'},
-  ],
-  bottoms: [
-    { id:'bottom1', name:'Blue Jeans',        src:'images/bottoms/blue_jeans.png'  },
-    { id:'bottom2', name:'Light Blue Jeans',  src:'images/bottoms/light_blue.png'  },
-    { id:'bottom3', name:'Black Flare Jeans', src:'images/bottoms/black_flare.png' },
-    { id:'bottom4', name:'White Ruffle Skirt',src:'images/bottoms/skirt1.png'      },
-    { id:'bottom5', name:'Green Flare Jeans', src:'images/bottoms/green_flare.png' },
-  ],
-  shoes:   [
-    { id:'shoes1', name:'White Sneakers', src:'images/shoes/shoes1.png'       },
-    { id:'shoes2', name:'Black Boots',    src:'images/shoes/Black_boots.png'  },
-    { id:'shoes3', name:'Black Sandals',  src:'images/shoes/Black_sandals.png'},
-  ],
-  blush:   [
-    { id:'blush1', name:'Red Blush',  src:'images/blush/Red_blush.png' },
-    { id:'blush2', name:'Pink Blush', src:'images/blush/Pink_blush.png'},
-  ],
-  hair:    [
-    { id:'hair1', name:'Hair to the Front', src:'images/hair/Hair_front.png' },
-  ],
+  tops: [],
+  bottoms: [],
+  shoes: [],
+  blush: [],
+  hair: []
 };
+
+async function loadWardrobe() {
+  const response = await fetch("./wardrobe.json");
+
+  if (!response.ok) {
+    throw new Error("Could not load wardrobe.json");
+  }
+
+  wardrobe = await response.json();
+
+  // Initialize your app only after wardrobe data is loaded.
+  randomOutfit(true);
+  renderGrid("tops");
+}
+
+loadWardrobe().catch(console.error);
 
 let selected     = { tops:null, bottoms:null, shoes:null, blush:null, hair:null };
 let currentTab   = 'tops';
